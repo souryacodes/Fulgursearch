@@ -1,0 +1,40 @@
+package com.example.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Light palette tokens matching theme.py
+val FulgurBgLight = Color(0xFFF4F6FB)
+val FulgurCardLight = Color(0xFFFFFFFF)
+val FulgurTextLight = Color(0xFF1D2433)
+val FulgurPrimaryLight = Color(0xFF2F6FED)
+val FulgurPrimaryPressedLight = Color(0xFF2559C4)
+val FulgurMutedLight = Color(0xFF6B7487)
+val FulgurBorderLight = Color(0xFFD5DBE8)
+val FulgurLightBtnLight = Color(0xFFE6EAF4)
+val FulgurSuggestionActiveLight = Color(0xFFEAF1FF)
+val FulgurDividerLight = Color(0xFFEEF0F6)
+val FulgurDividerSoftLight = Color(0xFFF3F4F9)
+val FulgurLineNoLight = Color(0xFFB0B7C9)
+val FulgurHitBarLight = Color(0xFFFFF9E0)
+val FulgurHitBarBorderLight = Color(0xFFF1E6B4)
+val FulgurHitSelectedLight = Color(0xFFFFF1C9)
+val FulgurHighlightLight = Color(0xFFFFE27A)
+val FulgurCurrentMatchLight = Color(0xFFFF9F43)
+val FulgurCurrentOutlineLight = Color(0xFFFF7A00)
+val FulgurTopListLight = Color(0xFF444C5E)
+val FulgurViewerBgLight = Color(0xFFE9EDF6)
+
+// Dark palette tokens
+val FulgurBgDark = Color(0xFF111622)
+val FulgurCardDark = Color(0xFF1A2234)
+val FulgurTextDark = Color(0xFFEEF2FF)
+val FulgurPrimaryDark = Color(0xFF5A90FF)
+val FulgurMutedDark = Color(0xFF9AA5BE)
+val FulgurBorderDark = Color(0xFF2F3B54)
+val FulgurLightBtnDark = Color(0xFF253047)
+val FulgurSuggestionActiveDark = Color(0xFF243456)
+val FulgurDividerDark = Color(0xFF27324A)
+val FulgurHitBarDark = Color(0xFF2D2718)
+val FulgurHitBarBorderDark = Color(0xFF594A22)
+val FulgurHitSelectedDark = Color(0xFF433818)
+val FulgurViewerBgDark = Color(0xFF141B2A)

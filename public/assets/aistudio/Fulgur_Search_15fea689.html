@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fulgur Search</title>
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6fb; color: #1d2433;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px; }
+  h1 { text-align: center; margin: 0; font-size: 44px; letter-spacing: -1px; }
+  h1 span { color: #2f6fed; }
+  .sub { text-align: center; color: #6b7487; margin: 6px 0 28px; }
+
+  .box { display: flex; gap: 8px; }
+  #q {
+    flex: 1; padding: 14px 16px; font-size: 18px;
+    border: 2px solid #d5dbe8; border-radius: 10px; outline: none;
+  }
+  #q:focus { border-color: #2f6fed; }
+  button {
+    padding: 0 20px; font-size: 16px; border: 0; border-radius: 10px;
+    background: #2f6fed; color: #fff; cursor: pointer;
+  }
+  button:hover { background: #2559c4; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #2f6fed; outline-offset: 2px; }
+  button.light { background: #e6eaf4; color: #1d2433; padding: 8px 14px; font-size: 14px; }
+  button.light:hover { background: #d5dbe8; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  #sug {
+    list-style: none; margin: 8px 0 0; padding: 0;
+    background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  }
+  #sug:empty { display: none; }
+  #sug li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px; font-size: 17px; cursor: pointer;
+    border-bottom: 1px solid #eef0f6;
+  }
+  #sug li:last-child { border-bottom: 0; }
+  #sug li.active, #sug li:hover { background: #eaf1ff; }
+  #sug .rank { color: #8a93a8; font-size: 13px; width: 26px; }
+  #sug b { color: #2f6fed; }
+  #sug .none { cursor: default; color: #6b7487; font-size: 15px; }
+
+  #status { color: #8a93a8; font-size: 13px; margin: 8px 4px; min-height: 18px; }
+  #result {
+    margin-top: 14px; padding: 16px; background: #fff; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  #result:empty { display: none; }
+  #result h3 { margin: 0 0 6px; font-size: 18px; }
+  #result p { margin: 4px 0; color: #6b7487; }
+
+  /* ---------- File viewer ---------- */
+  .vwrap {
+    margin-top: 18px; background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  .vhead {
+    display: flex; gap: 8px; align-items: center; padding: 10px 12px;
+    border-bottom: 1px solid #eef0f6;
+  }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; padding-bottom: 2px; }
+  .tab {
+    display: flex; flex: none; align-items: center; border-radius: 8px;
+    background: #e6eaf4; color: #1d2433; overflow: hidden; font-size: 13px;
+  }
+  .tab.on { background: #2f6fed; color: #fff; }
+  .tab button {
+    background: transparent; color: inherit; border-radius: 0;
+    padding: 7px 10px; font-size: 13px;
+  }
+  .tab button:hover { background: rgba(0,0,0,.08); }
+  .tab .rm { padding: 7px 9px; opacity: .75; }
+  .tab .badge {
+    display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 9px;
+    background: #ffe27a; color: #1d2433; font-size: 11px; line-height: 17px;
+  }
+  .none-tabs { color: #8a93a8; font-size: 13px; }
+
+  .hitbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 12px; background: #fff9e0; border-bottom: 1px solid #f1e6b4;
+    font-size: 14px;
+  }
+  .hitbar #hitinfo { flex: 1; min-width: 120px; }
+  #hits {
+    list-style: none; margin: 0; padding: 0; max-height: 150px; overflow: auto;
+    border-bottom: 1px solid #eef0f6;
+  }
+  #hits li { padding: 7px 14px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f9; }
+  #hits li:hover { background: #f4f7ff; }
+  #hits li.on { background: #fff1c9; }
+  #hits .loc { display: block; color: #8a93a8; font-size: 12px; }
+  #hits mark { background: #ffe27a; }
+
+  #viewer {
+    position: relative; height: 440px; overflow: auto; background: #e9edf6;
+    padding: 14px; scroll-behavior: auto;
+  }
+  .empty { color: #6b7487; text-align: center; padding: 70px 24px; font-size: 15px; line-height: 1.5; }
+  .page {
+    background: #fff; border-radius: 4px; box-shadow: 0 1px 6px rgba(0,0,0,.14);
+    margin: 0 auto 14px; max-width: 580px; padding: 14px 18px 18px;
+  }
+  .pghead {
+    display: flex; justify-content: space-between; gap: 8px;
+    font-size: 12px; color: #8a93a8; padding-bottom: 6px; margin-bottom: 10px;
+    border-bottom: 1px solid #eef0f6;
+  }
+  .line { display: flex; gap: 10px; font-size: 15px; line-height: 1.55; }
+  .line .no {
+    flex: none; width: 34px; text-align: right; color: #b0b7c9;
+    font-size: 12px; padding-top: 2px; user-select: none;
+  }
+  .line .lt { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  mark { background: #ffe27a; color: inherit; border-radius: 3px; padding: 0 1px; }
+  mark.cur { background: #ff9f43; outline: 2px solid #ff7a00; animation: pulse .9s ease-out; }
+  @keyframes pulse { 0% { outline-width: 8px; outline-color: rgba(255,122,0,.3); } 100% { outline-width: 2px; } }
+  @media (prefers-reduced-motion: reduce) { mark.cur { animation: none; } }
+
+  .vfoot {
+    display: flex; gap: 8px; align-items: center; padding: 8px 12px;
+    border-top: 1px solid #eef0f6; font-size: 14px; color: #6b7487;
+  }
+  .vfoot input { width: 64px; padding: 6px 8px; font-size: 14px; border: 1px solid #d5dbe8; border-radius: 8px; }
+
+  section { margin-top: 36px; padding-top: 18px; border-top: 1px solid #d5dbe8; }
+  section h2 { font-size: 16px; margin: 0 0 10px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  #top { margin: 6px 0 0; padding-left: 20px; color: #444c5e; }
+  small { color: #8a93a8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fulgur <span>Search</span></h1>
+  <p class="sub">Instant search suggestions, ranked</p>
+
+  <div class="box">
+    <label for="q" style="position:absolute;left:-9999px">Search</label>
+    <input id="q" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Start typing... (try &quot;a&quot;)" autofocus>
+    <button id="go">Search</button>
+  </div>
+  <ul id="sug"></ul>
+  <div id="status"></div>
+  <div id="result"></div>
+
+  <!-- ===== Files viewer: shows loaded files page by page ===== -->
+  <div class="vwrap" id="vwrap">
+    <div class="vhead">
+      <div class="tabs" id="tabs"></div>
+      <button class="light" id="add">Add files</button>
+      <input type="file" id="file" accept=".txt,.md,.csv,text/plain" multiple hidden>
+    </div>
+    <div class="hitbar" id="hitbar" hidden>
+      <span id="hitinfo"></span>
+      <button class="light" id="prev">Previous</button>
+      <button class="light" id="next">Next</button>
+      <button class="light" id="clr">Clear highlight</button>
+    </div>
+    <ul id="hits" hidden></ul>
+    <div id="viewer" tabindex="0" aria-label="File contents"></div>
+    <div class="vfoot">
+      <label for="pg">Page</label>
+      <input id="pg" type="number" min="1" value="1">
+      <span>of <span id="pgtotal">0</span></span>
+      <button class="light" id="pgo">Go</button>
+    </div>
+  </div>
+
+  <section>
+    <h2>Your files and words</h2>
+    <div class="row">
+      <button class="light" id="reset">Reset learned data</button>
+    </div>
+    <small>Add .txt, .md or .csv files with the button above. Each file is shown page by page, and its words become
+      suggestions. A file that is a list of short lines can give a starting rank after a comma,
+      e.g. <code>python tutorial,5</code>. Lines starting with # are shown but not learned.</small>
+    <p id="info"></p>
+
+    <h2 style="margin-top:18px">Your most searched</h2>
+    <ol id="top"></ol>
+  </section>
+</main>
+
+<script>
+/* ===================== SETTINGS ===================== */
+const TOP_K = 5;          // how many suggestions to show
+const PAGE_LINES = 40;    // max lines per page in the viewer
+const PAGE_CHARS = 2600;  // or max characters per page, whichever comes first
+const MAX_HITS = 300;     // how many matches are listed
+const SEARCH_WEIGHT = 1000000; // each search counts for this much, so words you search always
+                               // rank above built-in and file words (more searches = higher)
+
+/* ===================== SAMPLE WORDS =====================
+   [word or phrase, starting rank]. Higher = ranked first. */
+const SAMPLE_WORDS = [
+  ["apple",100],["apple watch",85],["apple pie",60],["application",80],
+  ["apply",70],["apricot",40],["april",55],["apartment",50],
+  ["app store",75],["ant",20],["anchor",15],["android",90],
+  ["angular",45],["animal",35],["answer",30],["antivirus",25],
+  ["banana",88],["bank",65],["basketball",50],["battery",52],
+  ["bike",40],["biology",33],["bluetooth",44],["book",70],
+  ["browser",58],["python",95],["python tutorial",82],["pycharm",40],
+  ["pandas",55],["php",48],["process",45],["processor",50],
+  ["programming",85],["protocol",42],["c language",78],["cache",46],
+  ["computer",92],["computer networks",66],["cybersecurity",72],
+  ["coding",74],["college",68],["cricket",96],["chrome",80],
+  ["database",77],["data structures",79],["download",60],
+  ["diploma",62],["ecet",83],["ecet 2027",90],["engineering",76],
+  ["email",70],["flow",50],["fulgursearch",99],["facebook",73],
+  ["football",64],["github",81],["google",100],["gmail",78],
+  ["game",71],["java",84],["javascript",86],["jobs",69],
+  ["kernel",30],["keyboard",47],["linux",73],["laptop",67],
+  ["mango",59],["microprocessor",38],["mongodb",54],["movies",87],
+  ["mysql",56],["network",63],["notes",49],["operating system",70],
+  ["oracle",43],["search engine",88],["security",61],["sql",72],
+  ["trie",28],["typing",57],["ubuntu",52],["youtube",98],
+  ["weather",82],["windows",79],["zoom",45]
+];
+
+/* ===================== TRIE =====================
+   Every node keeps its own TOP-K list, already sorted,
+   so a lookup just walks down the letters. */
+const clean = s => s.toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+
+class Node {
+  constructor() { this.children = new Map(); this.top = []; } // top: [{score, word}]
+}
+
+class Trie {
+  constructor(k) { this.root = new Node(); this.k = k; this.scores = new Map(); }
+
+  add(word, score = 1) {
+    word = clean(word);
+    if (!word) return;
+    const total = (this.scores.get(word) || 0) + score;
+    this.scores.set(word, total);
+    let node = this.root;
+    this._update(node, word, total);
+    for (const ch of word) {
+      if (!node.children.has(ch)) node.children.set(ch, new Node());
+      node = node.children.get(ch);
+      this._update(node, word, total);
+    }
+  }
+
+  _update(node, word, score) {
+    const top = node.top.filter(e => e.word !== word);
+    top.push({ score, word });
+    top.sort((a, b) => b.score - a.score || (a.word < b.word ? -1 : 1));
+    node.top = top.slice(0, this.k);
+  }
+
+  suggest(prefix) {
+    const text = clean(prefix) + (/\s$/.test(prefix) && prefix.trim() ? " " : "");
+    let node = this.root;
+    for (const ch of text) {
+      node = node.children.get(ch);
+      if (!node) return [];
+    }
+    return node.top.map(e => e.word);
+  }
+}
+
+/* ===================== STORAGE (remembers between visits) ===================== */
+const KEY_SEARCHES = "fulgursearch_searches";   // { word: times searched }
+const KEY_WORDS    = "fulgursearch_words";      // old word lists (kept so earlier data still works)
+const KEY_DOCS     = "fulgursearch_docs";       // [{ name, text }] files shown in the viewer
+
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch (e) { return fallback; }
+}
+
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+  catch (e) { return false; }
+}
+
+// Plain-object counts without a prototype, so words like "constructor" are safe.
+let searches = Object.assign(Object.create(null), load(KEY_SEARCHES, {}));
+let fileWords = load(KEY_WORDS, []);
+if (!Array.isArray(fileWords)) fileWords = [];
+fileWords = fileWords.filter(e => Array.isArray(e) && typeof e[0] === "string" && Number.isFinite(e[1]));
+
+let docs = load(KEY_DOCS, []);
+if (!Array.isArray(docs)) docs = [];
+docs = docs.filter(d => d && typeof d.name === "string" && typeof d.text === "string");
+
+let trie;
+
+/* ===================== LEARNING FROM FILES ===================== */
+const STOP = new Set(("the and for are but not you all any can had her was one our out has have this that " +
+  "with from they will would there their what about which when your been were them then than into " +
+  "more some could other these also its his how who may").split(" "));
+
+// Returns [[word, rank], ...] for a file's text.
+function trainWords(doc) {
+  if (doc._words) return doc._words;
+  const lines = doc.text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"));
+  let out = [];
+  const short = lines.filter(l => l.split(/\s+/).length <= 6).length;
+
+  if (lines.length && short / lines.length >= 0.8) {
+    // Word-list file: one word or phrase per line, optional ",rank"
+    lines.forEach(line => {
+      const i = line.lastIndexOf(",");
+      let word = line, rank = 1;
+      if (i > 0 && /^\d+$/.test(line.slice(i + 1).trim())) {
+        word = line.slice(0, i); rank = parseInt(line.slice(i + 1), 10);
+      }
+      if (clean(word)) out.push([word, rank]);
+    });
+  } else {
+    // Normal text: every word becomes a suggestion, ranked by how often it appears
+    const counts = new Map();
+    for (const m of lines.join("\n").toLowerCase().matchAll(/[\p{L}\p{N}][\p{L}\p{N}'\u2019-]*/gu)) {
+      const w = m[0];
+      if (w.length < 3 || STOP.has(w)) continue;
+      counts.set(w, (counts.get(w) || 0) + 1);
+    }
+    out = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5000);
+  }
+  doc._words = out;
+  return out;
+}
+
+function build() {
+  trie = new Trie(TOP_K);
+  SAMPLE_WORDS.forEach(([w, r]) => trie.add(w, r));                 // 1. sample words
+  fileWords.forEach(([w, r]) => trie.add(w, r));                    // 2. old word lists
+  docs.forEach(d => trainWords(d).forEach(([w, r]) => trie.add(w, r))); // 3. your files
+  Object.entries(searches).forEach(([w, c]) => {                    // 4. your searches
+    if (Number.isFinite(c)) trie.add(w, c * SEARCH_WEIGHT);
+  });
+}
+
+/* ===================== PAGE ELEMENTS ===================== */
+const q = document.getElementById("q");
+const sug = document.getElementById("sug");
+const statusEl = document.getElementById("status");
+const resultEl = document.getElementById("result");
+const info = document.getElementById("info");
+const topList = document.getElementById("top");
+
+const wrapEl = document.getElementById("vwrap");
+const tabsEl = document.getElementById("tabs");
+const viewer = document.getElementById("viewer");
+const hitBar = document.getElementById("hitbar");
+const hitInfo = document.getElementById("hitinfo");
+const hitsEl = document.getElementById("hits");
+const prevBtn = document.getElementById("prev");
+const nextBtn = document.getElementById("next");
+const pgInput = document.getElementById("pg");
+const pgTotal = document.getElementById("pgtotal");
+const fileInput = document.getElementById("file");
+
+let results = [];
+let active = -1;
+
+/* ===================== SUGGESTIONS ===================== */
+function render() {
+  const text = q.value;
+  sug.innerHTML = "";
+  active = -1;
+
+  if (!text.trim()) { results = []; statusEl.textContent = ""; return; }
+
+  const t0 = performance.now();
+  results = trie.suggest(text);
+  const ms = performance.now() - t0;
+
+  if (results.length === 0) {
+    const li = document.createElement("li");
+    li.className = "none";
+    li.textContent = "No suggestions. Press Enter to add this word.";
+    sug.appendChild(li);
+    statusEl.textContent = "";
+    return;
+  }
+
+  const n = clean(text).length + (/\s$/.test(text) ? 1 : 0);
+  results.forEach((word, i) => {
+    const li = document.createElement("li");
+    const rank = document.createElement("span");
+    rank.className = "rank";
+    rank.textContent = "#" + (i + 1);
+    const label = document.createElement("span");
+    const bold = document.createElement("b");
+    bold.textContent = word.slice(0, n);
+    label.appendChild(bold);
+    label.appendChild(document.createTextNode(word.slice(n)));
+    li.appendChild(rank);
+    li.appendChild(label);
+    li.addEventListener("mousedown", e => { e.preventDefault(); doSearch(word); });
+    sug.appendChild(li);
+  });
+  statusEl.textContent = results.length + " suggestion(s) in " + ms.toFixed(3) + " ms";
+}
+
+function highlight() {
+  [...sug.children].forEach((li, i) => li.classList.toggle("active", i === active));
+}
+
+/* ===================== FILE VIEWER ===================== */
+let activeDoc = docs.length ? docs[0].name : null;  // file currently shown
+let query = "";      // text being highlighted
+let hits = [];       // [{doc, k, page, line, text, idx, len}]
+let hitCounts = new Map();
+let cur = -1;        // index of the current match
+
+const smooth = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
+// Split a file into pages (by lines and characters)
+function pagesOf(doc) {
+  if (doc._pages) return doc._pages;
+  const pages = [];
+  let page = [], chars = 0;
+  doc.text.split(/\r?\n/).forEach((t, i) => {
+    page.push({ n: i + 1, t });
+    chars += t.length;
+    if (page.length >= PAGE_LINES || chars >= PAGE_CHARS) { pages.push(page); page = []; chars = 0; }
+  });
+  if (page.length) pages.push(page);
+  if (!pages.length) pages.push([{ n: 1, t: "" }]);
+  doc._pages = pages;
+  return pages;
+}
+
+function makeRegex(text) {
+  const words = clean(text).split(" ").filter(Boolean)
+    .map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return words.length ? words.join("\\s+") : null;   // phrase; spaces match any whitespace
+}
+
+// Find every place the text appears, in every file, in reading order
+function findMatches(text) {
+  const src = makeRegex(text);
+  const list = [], counts = new Map();
+  if (!src) return { list, counts };
+  for (const d of docs) {
+    let k = 0;
+    pagesOf(d).forEach((pg, pi) => pg.forEach(l => {
+      for (const m of l.t.matchAll(new RegExp(src, "gi"))) {
+        if (list.length < MAX_HITS) {
+          list.push({ doc: d.name, k, page: pi + 1, line: l.n, text: l.t, idx: m.index, len: m[0].length });
+        }
+        counts.set(d.name, (counts.get(d.name) || 0) + 1);
+        k++;
+      }
+    }));
+  }
+  return { list, counts };
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  if (!docs.length) {
+    const s = document.createElement("span");
+    s.className = "none-tabs";
+    s.textContent = "No files yet";
+    tabsEl.appendChild(s);
+    return;
+  }
+  docs.forEach(d => {
+    const tab = document.createElement("div");
+    tab.className = "tab" + (d.name === activeDoc ? " on" : "");
+    const label = document.createElement("button");
+    label.textContent = d.name;
+    if (query && hitCounts.get(d.name)) {
+      const b = document.createElement("span");
+      b.className = "badge";
+      b.textContent = hitCounts.get(d.name);
+      label.appendChild(b);
+    }
+    label.addEventListener("click", () => { activeDoc = d.name; renderTabs(); renderPages(); markCurrent(false); });
+    const rm = document.createElement("button");
+    rm.className = "rm";
+    rm.textContent = "\u00d7";
+    rm.setAttribute("aria-label", "Remove " + d.name);
+    rm.addEventListener("click", () => removeDoc(d.name));
+    tab.appendChild(label);
+    tab.appendChild(rm);
+    tabsEl.appendChild(tab);
+  });
+}
+
+function renderPages() {
+  viewer.innerHTML = "";
+  const d = docs.find(x => x.name === activeDoc);
+  if (!d) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = "No files yet. Press Add files and choose a .txt file. Its text appears here page " +
+                    "by page, and every word in it becomes a suggestion.";
+    viewer.appendChild(e);
+    pgTotal.textContent = "0";
+    return;
+  }
+  const src = query ? makeRegex(query) : null;
+  const pages = pagesOf(d);
+  let k = 0;
+  pages.forEach((pg, pi) => {
+    const card = document.createElement("article");
+    card.className = "page";
+    const head = document.createElement("div");
+    head.className = "pghead";
+    const a = document.createElement("span");
+    a.textContent = "Page " + (pi + 1) + " of " + pages.length;
+    const b = document.createElement("span");
+    b.textContent = d.name;
+    head.appendChild(a); head.appendChild(b);
+    card.appendChild(head);
+
+    pg.forEach(l => {
+      const row = document.createElement("div");
+      row.className = "line";
+      const no = document.createElement("span");
+      no.className = "no";
+      no.textContent = l.n;
+      const lt = document.createElement("span");
+      lt.className = "lt";
+      if (src) {
+        let last = 0;
+        for (const m of l.t.matchAll(new RegExp(src, "gi"))) {
+          lt.appendChild(document.createTextNode(l.t.slice(last, m.index)));
+          const mk = document.createElement("mark");
+          mk.textContent = m[0];
+          mk.dataset.k = k++;
+          lt.appendChild(mk);
+          last = m.index + m[0].length;
+        }
+        lt.appendChild(document.createTextNode(l.t.slice(last)));
+      } else {
+        lt.textContent = l.t;
+      }
+      if (!l.t) lt.textContent = "\u00a0";
+      row.appendChild(no); row.appendChild(lt);
+      card.appendChild(row);
+    });
+    viewer.appendChild(card);
+  });
+  pgTotal.textContent = pages.length;
+  pgInput.max = pages.length;
+  viewer.scrollTop = 0;
+  updatePageNow();
+}
+
+function renderHits() {
+  hitsEl.innerHTML = "";
+  hitBar.hidden = !query;
+  hitsEl.hidden = !hits.length;
+  prevBtn.disabled = nextBtn.disabled = hits.length < 2;
+  if (!query) return;
+  if (!hits.length) {
+    hitInfo.textContent = "No match for \u201c" + query + "\u201d in your files.";
+    return;
+  }
+  hits.forEach((h, i) => {
+    const li = document.createElement("li");
+    const loc = document.createElement("span");
+    loc.className = "loc";
+    loc.textContent = h.doc + ", page " + h.page + ", line " + h.line;
+    const sn = document.createElement("span");
+    const from = Math.max(0, h.idx - 40), to = Math.min(h.text.length, h.idx + h.len + 60);
+    sn.appendChild(document.createTextNode((from > 0 ? "\u2026" : "") + h.text.slice(from, h.idx)));
+    const mk = document.createElement("mark");
+    mk.textContent = h.text.slice(h.idx, h.idx + h.len);
+    sn.appendChild(mk);
+    sn.appendChild(document.createTextNode(h.text.slice(h.idx + h.len, to) + (to < h.text.length ? "\u2026" : "")));
+    li.appendChild(loc); li.appendChild(sn);
+    li.addEventListener("click", () => showHit(i));
+    hitsEl.appendChild(li);
+  });
+}
+
+function scrollToEl(el) {
+  const r = el.getBoundingClientRect(), c = viewer.getBoundingClientRect();
+  viewer.scrollTo({ top: viewer.scrollTop + (r.top - c.top) - c.height / 3, behavior: smooth() });
+}
+
+// Mark the current match in the page view (and scroll to it)
+function markCurrent(scroll) {
+  viewer.querySelectorAll("mark.cur").forEach(m => m.classList.remove("cur"));
+  if (cur < 0 || !hits[cur] || hits[cur].doc !== activeDoc) return;
+  const mk = viewer.querySelector('mark[data-k="' + hits[cur].k + '"]');
+  if (mk) { mk.classList.add("cur"); if (scroll) scrollToEl(mk); }
+}
+
+function showHit(i) {
+  if (!hits.length) return;
+  cur = (i + hits.length) % hits.length;
+  const h = hits[cur];
+  if (activeDoc !== h.doc) { activeDoc = h.doc; renderTabs(); renderPages(); }
+  markCurrent(true);
+  [...hitsEl.children].forEach((li, n) => li.classList.toggle("on", n === cur));
+  const li = hitsEl.children[cur];
+  if (li) {
+    const top = li.offsetTop - hitsEl.offsetTop;
+    if (top < hitsEl.scrollTop || top + li.offsetHeight > hitsEl.scrollTop + hitsEl.clientHeight) {
+      hitsEl.scrollTop = Math.max(0, top - 30);
+    }
+  }
+  const total = [...hitCounts.values()].reduce((a, b) => a + b, 0);
+  hitInfo.textContent = "\u201c" + query + "\u201d: match " + (cur + 1) + " of " + total +
+    " (" + h.doc + ", page " + h.page + ", line " + h.line + ")";
+}
+
+// Highlight a search in all files and jump to the first match
+function applyQuery(text) {
+  query = clean(text);
+  const r = query ? findMatches(query) : { list: [], counts: new Map() };
+  hits = r.list; hitCounts = r.counts; cur = -1;
+  if (hits.length) activeDoc = hits[0].doc;
+  renderTabs(); renderPages(); renderHits();
+  if (hits.length) showHit(0);
+  return hits.length;
+}
+
+function clearQuery() { applyQuery(""); }
+
+// Page number display follows the scroll position
+let raf = 0;
+function updatePageNow() {
+  const cards = viewer.querySelectorAll(".page");
+  if (!cards.length) { pgInput.value = 1; return; }
+  let p = 1;
+  const top = viewer.scrollTop + 30;
+  for (let i = 0; i < cards.length; i++) { if (cards[i].offsetTop <= top) p = i + 1; else break; }
+  if (document.activeElement !== pgInput) pgInput.value = p;
+}
+viewer.addEventListener("scroll", () => {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(updatePageNow);
+});
+
+function goToPage() {
+  const cards = viewer.querySelectorAll(".page");
+  if (!cards.length) return;
+  const p = Math.min(cards.length, Math.max(1, parseInt(pgInput.value, 10) || 1));
+  pgInput.value = p;
+  viewer.scrollTo({ top: cards[p - 1].offsetTop - 10, behavior: smooth() });
+}
+document.getElementById("pgo").addEventListener("click", goToPage);
+pgInput.addEventListener("keydown", e => { if (e.key === "Enter") goToPage(); });
+
+prevBtn.addEventListener("click", () => showHit(cur - 1));
+nextBtn.addEventListener("click", () => showHit(cur + 1));
+document.getElementById("clr").addEventListener("click", clearQuery);
+
+/* ===================== SEARCH (rank +1) ===================== */
+function doSearch(text) {
+  text = clean(text);
+  if (!text) return;
+  trie.add(text, SEARCH_WEIGHT);                       // rank goes up automatically
+  searches[text] = (searches[text] || 0) + 1;
+  const savedSearch = save(KEY_SEARCHES, searches);
+
+  const found = applyQuery(text);                      // highlight in the files
+  const fileCount = new Set(hits.map(h => h.doc)).size;
+
+  resultEl.innerHTML = "";
+  const h = document.createElement("h3");
+  h.textContent = "Searched: " + text;
+  const p = document.createElement("p");
+  p.textContent = "Rank updated (+1). Searched " + searches[text] + " time(s) so far. " +
+    (savedSearch ? "" : "Could not save this search to browser storage. ") +
+    (!docs.length ? "Add a file to see where it appears."
+      : found ? "Found in " + fileCount + " file(s). Showing the first match below."
+              : "Not found in your files.");
+  resultEl.appendChild(h);
+  resultEl.appendChild(p);
+
+  q.value = "";
+  sug.innerHTML = "";
+  statusEl.textContent = "";
+  results = [];
+  active = -1;
+  updateTop();
+  if (found) wrapEl.scrollIntoView({ behavior: smooth(), block: "nearest" });
+  q.focus();
+}
+
+/* ===================== KEYBOARD ===================== */
+q.addEventListener("input", render);
+
+q.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" && results.length) {
+    e.preventDefault(); active = (active + 1) % results.length; highlight();
+  } else if (e.key === "ArrowUp" && results.length) {
+    e.preventDefault(); active = (active <= 0 ? results.length : active) - 1; highlight();
+  } else if (e.key === "Tab" && results.length) {
+    e.preventDefault();
+    q.value = results[active >= 0 ? active : 0];     // complete with best suggestion
+    render();
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    doSearch(active >= 0 ? results[active] : q.value);
+  } else if (e.key === "Escape") {
+    q.value = ""; render();
+  }
+});
+
+document.getElementById("go").addEventListener("click", () => doSearch(q.value));
+
+/* ===================== ADD / REMOVE FILES ===================== */
+document.getElementById("add").addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", async e => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  if (!files.length) return;
+  let added = 0, failed = [];
+  for (const f of files) {
+    try {
+      const text = await f.text();
+      const doc = { name: f.name, text };
+      const i = docs.findIndex(d => d.name === f.name);   // same name replaces, no duplicates
+      if (i >= 0) docs[i] = doc; else docs.push(doc);
+      activeDoc = f.name;
+      added++;
+    } catch (err) { failed.push(f.name); }
+  }
+  const saved = save(KEY_DOCS, docs.map(d => ({ name: d.name, text: d.text })));
+  build();
+  query = ""; hits = []; hitCounts = new Map(); cur = -1;
+  renderTabs(); renderPages(); renderHits(); updateInfo();
+  info.textContent += " Loaded " + added + " file(s)." +
+    (failed.length ? " Could not read: " + failed.join(", ") + "." : "") +
+    (saved ? "" : " These files are too large to keep after you close the page.");
+});
+
+function removeDoc(name) {
+  if (!confirm("Remove " + name + " from Fulgur Search?")) return;
+  docs = docs.filter(d => d.name !== name);
+  if (activeDoc === name) activeDoc = docs.length ? docs[0].name : null;
+  save(KEY_DOCS, docs.map(d => ({ name: d.name, text: d.text })));
+  build(); updateInfo(); render();
+  applyQuery(query);
+}
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Forget your searches and loaded files?")) return;
+  searches = Object.create(null); fileWords = []; docs = []; activeDoc = null;
+  save(KEY_SEARCHES, searches); save(KEY_WORDS, fileWords); save(KEY_DOCS, docs);
+  build(); updateInfo(); updateTop(); render();
+  applyQuery("");
+  resultEl.innerHTML = "";
+});
+
+/* ===================== SMALL DISPLAY HELPERS ===================== */
+function updateInfo() {
+  info.textContent = SAMPLE_WORDS.length + " sample words + " + docs.length + " file(s) you added.";
+}
+
+function updateTop() {
+  topList.innerHTML = "";
+  const list = Object.entries(searches).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!list.length) {
+    const li = document.createElement("li");
+    li.textContent = "Nothing yet. Search a word and press Enter.";
+    topList.appendChild(li);
+    return;
+  }
+  list.forEach(([w, c]) => {
+    const li = document.createElement("li");
+    li.textContent = w + " (" + c + "x)";
+    topList.appendChild(li);
+  });
+}
+
+/* ===================== START ===================== */
+build();
+updateInfo();
+updateTop();
+renderTabs();
+renderPages();
+renderHits();
+</script>
+</body>
+</html>

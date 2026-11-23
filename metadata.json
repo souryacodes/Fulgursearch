@@ -1,0 +1,6 @@
+{
+  "name": "Fulgur Search",
+  "description": "Offline trie-based instant autocomplete search and local document viewer (Python 3.11 + Flet project with Android APK companion build).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
